@@ -1,29 +1,12 @@
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-
-[StructLayout(LayoutKind.Sequential)]
-public struct INPUT {
-    public uint type;
-    public MOUSEINPUT mi;
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public struct MOUSEINPUT {
-    public int dx;
-    public int dy;
-    public uint mouseData;
-    public uint dwFlags;
-    public uint time;
-    public IntPtr dwExtraInfo;
-}
-
 public class Win32 {
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
 
     [DllImport("user32.dll")]
-    public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+    public static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
     [DllImport("winmm.dll")]
     public static extern uint timeBeginPeriod(uint uMilliseconds);
@@ -31,25 +14,10 @@ public class Win32 {
     [DllImport("kernel32.dll")]
     public static extern void Sleep(uint dwMilliseconds);
 
-    public const int INPUT_MOUSE = 0;
-    public const int MOUSEEVENTF_LEFTDOWN = 0x0002;
-    public const int MOUSEEVENTF_LEFTUP   = 0x0004;
+    public const int LEFTDOWN = 0x02;
+    public const int LEFTUP   = 0x04;
 }
 "@
-
-function Send-LeftClick {
-    $down = New-Object INPUT
-    $down.type = [Win32]::INPUT_MOUSE
-    $down.mi = New-Object MOUSEINPUT
-    $down.mi.dwFlags = [Win32]::MOUSEEVENTF_LEFTDOWN
-
-    $up = New-Object INPUT
-    $up.type = [Win32]::INPUT_MOUSE
-    $up.mi = New-Object MOUSEINPUT
-    $up.mi.dwFlags = [Win32]::MOUSEEVENTF_LEFTUP
-
-    [Win32]::SendInput(2, @($down,$up), [Runtime.InteropServices.Marshal]::SizeOf([Type][INPUT]))
-}
 
 # High precision timer
 [Win32]::timeBeginPeriod(1)
@@ -58,15 +26,7 @@ $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::RealTime
 
 # Pattern de clicuri
 $config = @(
-    @(11,10), @(12,43), @(12,11), @(20,58), @(11,12), @(35,33), @(13,13), @(14,63), @(12,13), @(35,29),
-    @(13,11), @(16,55), @(12,15), @(16,42), @(13,8), @(27,54), @(12,15), @(16,41), @(14,6), @(37,59),
-    @(12,18), @(34,33), @(13,11), @(20,52), @(12,19), @(10,46), @(14,6), @(28,53), @(12,15), @(17,51),
-    @(14,9), @(20,57), @(17,9), @(36,35), @(13,12), @(18,55), @(12,15), @(16,59), @(12,14), @(12,60),
-    @(13,11), @(35,36), @(13,10), @(17,56), @(12,15), @(19,49), @(13,9), @(21,61), @(12,17), @(17,51),
-    @(13,10), @(28,63), @(12,13), @(22,43), @(12,10), @(15,60), @(12,15), @(34,35), @(13,10), @(18,56),
-    @(12,16), @(16,62), @(13,11), @(14,63), @(14,12), @(20,49), @(12,13), @(13,56), @(12,14), @(18,53),
-    @(13,14), @(10,62), @(12,15), @(16,54), @(14,8), @(18,71), @(12,18), @(15,53), @(13,12), @(15,69),
-    @(13,13), @(34,46), @(14,6), @(25,51), @(12,18), @(11,58), @(13,11), @(15,60)
+    @(11,10), @(12,43), @(12,11), @(20,58), @(11,12), @(35,33), @(13,13), @(14,63), @(12,13), @(35,29)
 )
 
 $idx = 0
@@ -90,7 +50,6 @@ while ($true) {
     }
     $f4PrevState = $f4Current
 
-    # Dacă toggle e ON, dăm click-uri folosind SendInput
     if ($toggle) {
         $pair = $config[$idx % $config.Count]
         $idx++
@@ -98,8 +57,10 @@ while ($true) {
         $downDelay = [Math]::Max(1, $pair[0] - $rand.Next(1,3))
         $upDelay   = [Math]::Max(1, $pair[1] - $rand.Next(1,3))
 
-        Send-LeftClick
+        # Click automat, independent de starea fizică
+        [Win32]::mouse_event([Win32]::LEFTDOWN, 0, 0, 0, 0)
         [Win32]::Sleep($downDelay)
+        [Win32]::mouse_event([Win32]::LEFTUP, 0, 0, 0, 0)
         [Win32]::Sleep($upDelay)
     }
     else {
