@@ -59,7 +59,8 @@ while ($true) {
     $f4PrevState = $f4Current
 
     # Dacă toggle e ON și mouse stânga e ținut
-    $leftHeld = ([Win32]::GetAsyncKeyState(0x01) -lt 0)
+    $leftHeld = ([Win32]::GetAsyncKeyState(0x01) -band 0x8000) -ne 0  # <<< modificarea
+
     if ($toggle -and $leftHeld) {
         $pair = $config[$idx % $config.Count]
         $idx++
