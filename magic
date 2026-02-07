@@ -19,14 +19,12 @@ public class Win32 {
 }
 "@
 
-# 1. Force High Precision
+# High precision timer
 [Win32]::timeBeginPeriod(1)
-
-# 2. Prevent Windows Efficiency Mode Throttling
 $process = [System.Diagnostics.Process]::GetCurrentProcess()
 $process.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::RealTime
 
-# 3. Data Pattern
+# Pattern de clicuri
 $config = @(
     @(11,10), @(12,43), @(12,11), @(20,58), @(11,12), @(35,33), @(13,13), @(14,63), @(12,13), @(35,29),
     @(13,11), @(16,55), @(12,15), @(16,42), @(13,8), @(27,54), @(12,15), @(16,41), @(14,6), @(37,59),
@@ -41,18 +39,28 @@ $config = @(
 
 $idx = 0
 $rand = New-Object System.Random
+$toggle = $false
+$f4PrevState = $false
 
 Write-Host "STABILIZED CLICKER ACTIVE" -ForegroundColor Green
-Write-Host "F4 + CLICK STANGA = activ | F12 = EXIT" -ForegroundColor Yellow
+Write-Host "F4 = toggle ON/OFF | F12 = EXIT" -ForegroundColor Yellow
 
 while ($true) {
     # F12 = exit
     if ([Win32]::GetAsyncKeyState(0x7B) -lt 0) { break }
 
-    $f4Held   = ([Win32]::GetAsyncKeyState(0x73) -lt 0) # F4
-    $leftHeld = ([Win32]::GetAsyncKeyState(0x01) -lt 0) # Left mouse
+    # Detect F4 toggle
+    $f4Current = ([Win32]::GetAsyncKeyState(0x73) -lt 0)
+    if ($f4Current -and -not $f4PrevState) {
+        $toggle = -not $toggle
+        if ($toggle) { Write-Host "CLICKER: ON" -ForegroundColor Green }
+        else { Write-Host "CLICKER: OFF" -ForegroundColor Red }
+    }
+    $f4PrevState = $f4Current
 
-    if ($f4Held -and $leftHeld) {
+    # Dacă toggle e ON și mouse stânga e ținut
+    $leftHeld = ([Win32]::GetAsyncKeyState(0x01) -lt 0)
+    if ($toggle -and $leftHeld) {
         $pair = $config[$idx % $config.Count]
         $idx++
 
